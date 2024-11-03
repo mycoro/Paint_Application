@@ -42,10 +42,7 @@ class MainActivity : AppCompatActivity() {
                 drawingView.setPathColor(color)
             }
         }
-    }
-
-    //when brush icon is pressed it will pop up a dialog
-    private fun setUpPathWidthSelector(drawingView: DrawingView) {
+    }private fun setUpPathWidthSelector(drawingView: DrawingView) {
 
         findViewById<ImageView>(R.id.brush_icon).setOnClickListener{
             val dialog = Dialog(this)
@@ -53,18 +50,19 @@ class MainActivity : AppCompatActivity() {
             dialog.show()
 
             //to set listeners to image view widths and from there send width to drawingview file
-            findViewById<ImageView>(R.id.first_width).setOnClickListener {
+            dialog.findViewById<ImageView>(R.id.first_width)?.setOnClickListener {
                 drawingView.setPathWidth(5)
                 dialog.dismiss()
             }
-            findViewById<ImageView>(R.id.sec_width).setOnClickListener {
+            dialog.findViewById<ImageView>(R.id.sec_width)?.setOnClickListener {
                 drawingView.setPathWidth(10)
                 dialog.dismiss()
             }
-            findViewById<ImageView>(R.id.last_width).setOnClickListener {
+            dialog.findViewById<ImageView>(R.id.last_width)?.setOnClickListener {
                 drawingView.setPathWidth(15)
                 dialog.dismiss()
             }
         }
     }
+
 }

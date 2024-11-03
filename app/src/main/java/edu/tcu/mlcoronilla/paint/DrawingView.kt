@@ -50,12 +50,16 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
 
     //set the path from selected width from main from user input
     fun setPathWidth(width: Int) {
-        path = CustomPath(path.color, width.toFloat())
+        val widthInPx = width * resources.displayMetrics.density
+        path = CustomPath(path.color, widthInPx)
     }
 
-    //define a method for the undo button, undoPath()
+    //to remove the last path drawn when the undo image view is clicked on
     fun undoPath() {
-
+        if(pathList.isNotEmpty()) {
+            pathList.removeLast()
+            invalidate()
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
