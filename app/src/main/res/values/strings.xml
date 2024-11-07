@@ -3,4 +3,5 @@
     <string name="box_text">colorbox</string>
     <string name="width_descr">width pop-up</string>
     <string name="icon_decrp">icons</string>
+    <string name="background_iv">background iv</string>
 </resources>
