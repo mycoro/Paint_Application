@@ -4,11 +4,11 @@ import android.app.Dialog
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
-import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -109,54 +109,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setUpSave(backgroundIv: ImageView) {
-        if (backgroundIv.drawable == null) {
-            // Set a default color if background is empty
-            val defaultBitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888).apply {
-                eraseColor(android.graphics.Color.WHITE)
-            }
-            backgroundIv.setImageBitmap(defaultBitmap)
-        }
-
         val dialog = showInProgress()
         val drawingFrameLayout = findViewById<FrameLayout>(R.id.drawing_fl)
 
-        drawingFrameLayout.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                drawingFrameLayout.viewTreeObserver.removeOnGlobalLayoutListener(this)
+        lifecycleScope.launch(Dispatchers.IO) {
+            val backgroundBitmap = if (backgroundIv.drawable != null) {
+                backgroundIv.drawToBitmap()
+            } else {
+                null
+            }
 
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val bitmap = drawingFrameLayout.drawToBitmap()
+            val drawingBitmap = drawingFrameLayout.drawToBitmap()
 
-                    val values = ContentValues().apply {
-                        put(MediaStore.MediaColumns.DISPLAY_NAME, System.currentTimeMillis().toString().substring(2, 11) + ".jpeg")
-                        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
-                    }
 
-                    val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-                        contentResolver.openOutputStream(uri).use { stream ->
-                            stream?.let { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
-                        }
-                        uri // Return the URI if successful
-                    }
-
-                    withContext(Dispatchers.Main) {
-                        dialog.dismiss()
-                        uri?.let { savedUri ->
-                            // Trigger sharing with the saved image URI
-                            val shareIntent: Intent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_STREAM, savedUri)
-                                type = "image/jpeg"
-                            }
-                            startActivity(Intent.createChooser(shareIntent, "Share Image"))
-                        } ?: run {
-                            // Show error message if URI is null
-                        }
-                    }
+            val finalBitmap = if (backgroundBitmap != null) {
+                // if there is a background it merges with drawing
+                Bitmap.createBitmap(backgroundBitmap.width, backgroundBitmap.height, Bitmap.Config.ARGB_8888).apply {
+                    val canvas = Canvas(this)
+                    canvas.drawBitmap(backgroundBitmap, 0f, 0f, null)
+                    canvas.drawBitmap(drawingBitmap, 0f, 0f, null)
+                }
+            } else {
+                //sets background image to white if nothing was drawn
+                Bitmap.createBitmap(drawingFrameLayout.width, drawingFrameLayout.height, Bitmap.Config.ARGB_8888).apply {
+                    val canvas = Canvas(this)
+                    canvas.drawColor(android.graphics.Color.WHITE)
+                    canvas.drawBitmap(drawingBitmap, 0f, 0f, null)
                 }
             }
-        })
+
+            //saves the image
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, System.currentTimeMillis().toString().substring(2, 11) + ".jpeg")
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DCIM)
+            }
+
+            val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                contentResolver.openOutputStream(uri).use { stream ->
+                    stream?.let { finalBitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                }
+                uri
+            }
+
+            withContext(Dispatchers.Main) {
+                dialog.dismiss()
+                uri?.let { savedUri ->
+                    //triggers the sharing pop up
+                    val shareIntent: Intent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_STREAM, savedUri)
+                        type = "image/jpeg"
+                    }
+                    startActivity(Intent.createChooser(shareIntent, "Share Image"))
+                }
+            }
+        }
     }
 
     private fun showInProgress():Dialog {

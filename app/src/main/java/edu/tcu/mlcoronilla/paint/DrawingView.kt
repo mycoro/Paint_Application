@@ -71,6 +71,6 @@ class DrawingView(context: Context, attrs: AttributeSet) : View(context, attrs) 
     }
 
     private data class CustomPath(val color: Int, val width: Float) : Path(){
-
+        //sets up path
     }
 }
